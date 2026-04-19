@@ -1,0 +1,614 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Todo – with Accounts</title>
+  <style>
+    :root {
+      --bg: #f9f9fb;
+      --card: #fff;
+      --text: #222;
+      --border: #ddd;
+      --accent: #4a9eff;
+      --done-bg: #e8f5e8;
+    }
+    [data-theme="dark"] {
+      --bg: #121212;
+      --card: #1e1e1e;
+      --text: #eee;
+      --border: #444;
+      --accent: #4a9eff;
+      --done-bg: #1a341a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 1rem;
+    }
+    .container {
+      max-width: 700px;
+      margin: 1rem auto;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    h1 { font-size: 1.5rem; }
+    .theme-toggle {
+      padding: 0.4rem 0.8rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      cursor: pointer;
+    }
+    .auth-panel, .main-panel {
+      padding: 1rem;
+      background: var(--card);
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      margin-bottom: 1rem;
+    }
+    .auth-panel h2 { margin-bottom: 1rem; font-size: 1.2rem; }
+    .form-row {
+      margin-bottom: 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    label {
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    input, select, button {
+      padding: 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--card);
+      color: var(--text);
+    }
+    button {
+      padding: 0.6rem 1rem;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .switch-mode {
+      margin-top: 0.8rem;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+    .error {
+      padding: 0.5rem;
+      margin: 0.5rem 0;
+      background: #ffeaea;
+      border: 1px solid #f55;
+      border-radius: 6px;
+      color: #a22;
+      font-size: 0.9rem;
+    }
+    .hidden { display: none; }
+    .main-panel h2 {
+      margin-bottom: 1rem;
+      font-size: 1.2rem;
+    }
+    .task-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .task-form > div {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .filter-bar {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.8rem;
+      flex-wrap: wrap;
+    }
+    .filter-bar select {
+      flex: 1;
+      min-width: 120px;
+    }
+    .task-list {
+      margin-top: 1rem;
+    }
+    .task {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.8rem 1rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+    }
+    .task.done {
+      background: var(--done-bg);
+      opacity: 0.85;
+    }
+    .task-content {
+      flex: 1;
+    }
+    .task-title {
+      font-weight: 500;
+      margin-bottom: 0.2rem;
+    }
+    .task-meta {
+      font-size: 0.85rem;
+      opacity: 0.8;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .task-actions button {
+      padding: 0.3rem 0.5rem;
+      font-size: 0.85rem;
+    }
+    .empty {
+      padding: 2rem 1rem;
+      text-align: center;
+      color: #888;
+    }
+    @media (max-width: 600px) {
+      .task-form { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body data-theme="light">
+  <div class="container">
+
+    <!-- Auth panel (login / signup) -->
+    <div id="authPanel" class="auth-panel">
+      <h2>Sign In / Sign Up</h2>
+      <div id="authError" class="error hidden"></div>
+
+      <form id="signinForm">
+        <div class="form-row">
+          <label>Email</label>
+          <input type="email" id="signinEmail" placeholder="you@example.com" required />
+        </div>
+        <div class="form-row">
+          <label>Password</label>
+          <input type="password" id="signinPassword" placeholder="your password" required />
+        </div>
+        <button type="submit">Sign In</button>
+        <div class="switch-mode">
+          No account? <a href="#" id="showSignup">Sign Up</a>
+        </div>
+      </form>
+
+      <form id="signupForm" class="hidden">
+        <div class="form-row">
+          <label>Full Name (optional)</label>
+          <input type="text" id="signupName" placeholder="Vijay J" />
+        </div>
+        <div class="form-row">
+          <label>Email</label>
+          <input type="email" id="signupEmail" placeholder="you@example.com" required />
+        </div>
+        <div class="form-row">
+          <label>Password</label>
+          <input type="password" id="signupPassword" placeholder="min 6 characters" required />
+        </div>
+        <button type="submit">Sign Up</button>
+        <div class="switch-mode">
+          Already have an account? <a href="#" id="showSignin">Sign In</a>
+        </div>
+      </form>
+    </div>
+
+    <!-- Main todo panel (shows after login) -->
+    <div id="mainPanel" class="main-panel hidden">
+      <div class="header">
+        <h2>Your Todo List</h2>
+        <button id="logoutBtn">Logout</button>
+      </div>
+
+      <form class="task-form" id="taskForm">
+        <div>
+          <label>Task</label>
+          <input type="text" id="taskInput" placeholder="Buy groceries..." required />
+        </div>
+        <div>
+          <label>Category</label>
+          <input type="text" id="categoryInput" placeholder="Home, Work, Study" />
+        </div>
+        <div>
+          <label>Due Date</label>
+          <input type="date" id="dueDateInput" />
+        </div>
+        <div>
+          <label>Priority</label>
+          <select id="priorityInput">
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+        <div style="grid-column: span 2;">
+          <button type="submit">Add Task</button>
+        </div>
+      </form>
+
+      <div class="filter-bar">
+        <select id="statusFilter">
+          <option value="all">All</option>
+          <option value="pending">Pending</option>
+          <option value="done">Done</option>
+        </select>
+        <input type="text" id="searchInput" placeholder="Search tasks..." />
+      </div>
+
+      <div class="task-list" id="taskList"></div>
+    </div>
+
+    <div class="header">
+      <button class="theme-toggle" id="themeToggle">Toggle Dark Mode</button>
+    </div>
+
+  </div>
+
+ 
+   <script>
+document.addEventListener("DOMContentLoaded", () => {
+  const BACKEND_URL = "http://localhost:3000";
+
+  let authToken = null;
+  let tasks = [];
+
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => document.querySelectorAll(sel);
+
+  const hide = (el) => el.classList.add("hidden");
+  const show = (el) => el.classList.remove("hidden");
+
+  const showError = (msg) => {
+    const el = $("#authError");
+    el.textContent = msg;
+    show(el);
+  };
+
+  const clearError = () => {
+    const el = $("#authError");
+    el.textContent = "";
+    hide(el);
+  };
+
+  const showAuthPanel = () => {
+    show($("#authPanel"));
+    hide($("#mainPanel"));
+  };
+
+  const showMainPanel = () => {
+    hide($("#authPanel"));
+    show($("#mainPanel"));
+  };
+
+  $("#showSignup").addEventListener("click", (e) => {
+    e.preventDefault();
+    show($("#signupForm"));
+    hide($("#signinForm"));
+    clearError();
+  });
+
+  $("#showSignin").addEventListener("click", (e) => {
+    e.preventDefault();
+    hide($("#signupForm"));
+    show($("#signinForm"));
+    clearError();
+  });
+
+  $("#signinForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    clearError();
+
+    const email = $("#signinEmail").value.trim();
+    const password = $("#signinPassword").value;
+
+    if (!email || !password) return;
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || "Login failed");
+      }
+
+      const data = await res.json();
+      authToken = data.token;
+      saveAuth();
+      await fetchTasks();
+      showMainPanel();
+    } catch (err) {
+      showError(err.message);
+    }
+  });
+
+  $("#signupForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    clearError();
+
+    const name = $("#signupName").value.trim();
+    const email = $("#signupEmail").value.trim();
+    const password = $("#signupPassword").value;
+
+    if (!email || !password) return;
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/auth/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, name }),
+      });
+
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || "Signup failed");
+      }
+
+      const data = await res.json();
+      authToken = data.token;
+      saveAuth();
+      await fetchTasks();
+      showMainPanel();
+    } catch (err) {
+      showError(err.message);
+    }
+  });
+
+  const saveAuth = () => {
+    if (authToken) localStorage.setItem("authToken", authToken);
+    else localStorage.removeItem("authToken");
+  };
+
+  const loadAuth = () => {
+    authToken = localStorage.getItem("authToken");
+    if (authToken) fetchTasks().catch(console.error);
+  };
+
+  const logout = () => {
+    authToken = null;
+    saveAuth();
+    showAuthPanel();
+    tasks = [];
+    renderTasks();
+  };
+
+  $("#logoutBtn").addEventListener("click", logout);
+
+  const fetchTasks = async () => {
+    if (!authToken) return;
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/tasks`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || "Failed to fetch tasks");
+      }
+
+      tasks = await res.json();
+      renderTasks();
+    } catch (err) {
+      console.error("fetchTasks error:", err);
+      logout();
+    }
+  };
+
+  const addTask = async (taskData) => {
+    if (!authToken) return;
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/tasks`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(taskData),
+      });
+
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || "Failed to save task");
+      }
+
+      const newTask = await res.json();
+      tasks.push(newTask);
+      renderTasks();
+    } catch (err) {
+      alert("Error saving task: " + err.message);
+    }
+  };
+
+  const updateTask = async (id, updates) => {
+    if (!authToken) return;
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/tasks/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(updates),
+      });
+
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || "Failed to update task");
+      }
+
+      const updatedTask = await res.json();
+      const ix = tasks.findIndex((t) => t._id === id);
+      if (ix !== -1) tasks[ix] = updatedTask;
+      renderTasks();
+    } catch (err) {
+      alert("Error updating task: " + err.message);
+    }
+  };
+
+  const deleteTask = async (id) => {
+    if (!authToken) return;
+    if (!confirm("Delete this task?")) return;
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/tasks/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || "Failed to delete task");
+      }
+
+      tasks = tasks.filter((t) => t._id !== id);
+      renderTasks();
+    } catch (err) {
+      alert("Error deleting task: " + err.message);
+    }
+  };
+
+  const formatDueDate = (dateStr) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    const now = new Date();
+    const isToday =
+      d.getDate() === now.getDate() &&
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear();
+    if (isToday) return "Today";
+    return d.toLocaleDateString();
+  };
+
+  const renderTasks = () => {
+    const list = $("#taskList");
+    const status = $("#statusFilter").value;
+    const searchText = $("#searchInput")?.value.toLowerCase() || "";
+
+    const filtered = tasks.filter((t) => {
+      const matchesStatus =
+        status === "all" ||
+        (status === "done" && t.done) ||
+        (status === "pending" && !t.done);
+
+      const matchesSearch =
+        !searchText ||
+        t.text.toLowerCase().includes(searchText) ||
+        (t.category || "").toLowerCase().includes(searchText);
+
+      return matchesStatus && matchesSearch;
+    });
+
+    if (filtered.length === 0) {
+      list.innerHTML = `<div class="empty">No tasks found.</div>`;
+      return;
+    }
+
+    list.innerHTML = filtered
+      .map((t) => {
+        const due = formatDueDate(t.dueDate);
+        const priClass = t.priority === "high" ? " (high!)" : "";
+        return `
+          <div class="task ${t.done ? "done" : ""}" data-id="${t._id}">
+            <input type="checkbox" ${t.done ? "checked" : ""} />
+            <div class="task-content">
+              <div class="task-title">${t.text}</div>
+              <div class="task-meta">
+                <span>Category: ${t.category || "Uncategorized"}</span>
+                <span>Priority: ${t.priority}${priClass}</span>
+                ${due ? `<span>Due: ${due}</span>` : ""}
+              </div>
+            </div>
+            <div class="task-actions">
+              <button class="edit">Edit</button>
+              <button class="delete">×</button>
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+
+    $$(".task input[type=checkbox]").forEach((cb) => {
+      cb.addEventListener("change", (e) => {
+        const id = e.target.closest(".task").dataset.id;
+        updateTask(id, { done: e.target.checked });
+      });
+    });
+
+    $$(".task .edit").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const id = e.target.closest(".task").dataset.id;
+        const task = tasks.find((t) => t._id === id);
+        if (!task) return;
+
+        const newText = prompt("Edit task:", task.text);
+        if (newText !== null && newText.trim() !== "") {
+          updateTask(id, { text: newText.trim() });
+        }
+      });
+    });
+
+    $$(".task .delete").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const id = e.target.closest(".task").dataset.id;
+        deleteTask(id);
+      });
+    });
+  };
+
+  $("#taskForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    const text = $("#taskInput").value.trim();
+    const category = $("#categoryInput").value.trim();
+    const dueDate = $("#dueDateInput").value;
+    const priority = $("#priorityInput").value;
+
+    if (!text) return;
+
+    addTask({ text, category, dueDate, priority });
+
+    $("#taskInput").value = "";
+    $("#categoryInput").value = "";
+    $("#dueDateInput").value = "";
+    $("#priorityInput").value = "medium";
+  });
+
+  $("#statusFilter").addEventListener("change", renderTasks);
+  $("#searchInput").addEventListener("input", renderTasks);
+
+  const themeToggle = $("#themeToggle");
+  themeToggle.addEventListener("click", () => {
+    const current = document.body.getAttribute("data-theme");
+    document.body.setAttribute("data-theme", current === "dark" ? "light" : "dark");
+  });
+
+  loadAuth();
+  if (!authToken) showAuthPanel();
+  else showMainPanel();
+});
+</script>
