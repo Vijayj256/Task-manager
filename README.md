@@ -1,2 +1,1 @@
-# SMART-TODO-LIST
-TODO LIST FOR DAILY TASKS
+# task manager
